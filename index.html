@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MINDSET STACK | PERFORMANCE OS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --bg: #020202; --sidebar: #050505; --card: rgba(15, 15, 15, 0.7); 
+            --accent: #00ff88; --border: rgba(255, 255, 255, 0.05); 
+            --text: #fff; --dim: #555; --glow: rgba(0, 255, 136, 0.3);
+            --warn: #ff9500; --danger: #ff4444;
+        }
+        * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        body { margin: 0; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Navigation */
+        nav { width: 280px; background: var(--sidebar); border-right: 1px solid var(--border); padding: 50px 25px; display: flex; flex-direction: column; backdrop-filter: blur(20px); z-index: 100; }
+        .logo-box { margin-bottom: 60px; }
+        .logo-main { font-size: 24px; font-weight: 800; letter-spacing: -1.5px; text-shadow: 0 0 20px var(--glow); }
+        .logo-sub { font-size: 9px; color: var(--accent); letter-spacing: 3px; font-weight: 800; text-transform: uppercase; margin-top: 5px; }
+        .nav-item { padding: 16px 20px; border-radius: 16px; cursor: pointer; color: var(--dim); margin-bottom: 12px; font-weight: 600; display: flex; align-items: center; gap: 15px; border: 1px solid transparent; }
+        .nav-item:hover { background: rgba(255,255,255,0.03); color: #fff; transform: translateX(5px); }
+        .nav-item.active { background: rgba(0, 255, 136, 0.05); color: var(--accent); border-color: rgba(0, 255, 136, 0.2); }
+
+        /* Main Content */
+        main { flex: 1; padding: 60px; overflow-y: auto; background: radial-gradient(circle at 80% 10%, #0a1510 0%, #020202 50%); }
+        .view { display: none; max-width: 1100px; margin: 0 auto; }
+        .view.active { display: block; animation: cyberFade 0.6s ease; }
+        @keyframes cyberFade { from { opacity: 0; filter: blur(10px); transform: scale(0.98); } to { opacity: 1; filter: blur(0); transform: scale(1); } }
+
+        /* Widgets & Dashboard */
+        .dashboard-grid { display: grid; grid-template-columns: 1.8fr 1fr; gap: 30px; }
+        .widget { background: var(--card); border: 1px solid var(--border); border-radius: 32px; padding: 40px; position: relative; backdrop-filter: blur(10px); }
+        .big-number { font-size: 96px; font-weight: 800; letter-spacing: -6px; color: var(--accent); line-height: 0.9; filter: drop-shadow(0 0 15px var(--glow)); }
+        .label { font-size: 11px; font-weight: 800; color: var(--dim); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 20px; display: block; }
+        .chart-container { width: 100%; height: 220px; margin-top: 20px; }
+        svg.area-chart { width: 100%; height: 100%; overflow: visible; }
+        .chart-path { fill: url(#glowGradient); stroke: var(--accent); stroke-width: 5; stroke-linecap: round; }
+        .chart-labels { display: flex; justify-content: space-between; margin-top: 20px; }
+        .day-name { font-size: 10px; font-weight: 800; color: var(--dim); width: 40px; text-align: center; }
+        .day-name.active { color: var(--accent); }
+
+        /* Lists & Tasks */
+        .input-area { display: flex; gap: 15px; margin-bottom: 40px; }
+        input { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 22px 28px; border-radius: 20px; color: #fff; flex: 1; font-size: 16px; outline: none; }
+        .add-btn { background: var(--accent); color: #000; border: none; padding: 12px 25px; border-radius: 12px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; }
+        .item-container { margin-bottom: 20px; border: 1px solid var(--border); border-radius: 24px; background: rgba(255,255,255,0.01); overflow: hidden; }
+        .stack-row { padding: 25px; display: flex; align-items: center; border-bottom: 1px solid var(--border); }
+        .progress-track { width: 100%; height: 4px; background: #111; border-radius: 2px; margin-top: 12px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.8s ease; box-shadow: 0 0 10px var(--accent); }
+        .sub-tasks { padding: 0 0 20px 70px; }
+        .sub-row { display: flex; align-items: center; gap: 15px; padding: 10px 0; color: var(--dim); font-size: 14px; }
+        .checkbox-ui { width: 24px; height: 24px; border: 2px solid #222; border-radius: 8px; margin-right: 25px; cursor: pointer; }
+        .checked .checkbox-ui { background: var(--accent); border-color: var(--accent); }
+        .sub-check { width: 18px; height: 18px; border: 2px solid #333; border-radius: 5px; cursor: pointer; }
+        .checked .sub-check { background: var(--accent); border-color: var(--accent); }
+        .del-icon { margin-left: auto; color: #333; cursor: pointer; font-size: 12px; padding: 5px; }
+        .del-icon:hover { color: var(--danger); }
+
+        /* Vision Map */
+        #visionCanvas { cursor: crosshair; background: #050505; width: 100%; height: 100%; border-radius: 20px; background-image: radial-gradient(#111 1px, transparent 1px); background-size: 25px 25px; }
+        .map-controls { position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; background: rgba(10,10,10,0.85); padding: 18px; border-radius: 20px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
+        .color-indicator { width: 18px; height: 18px; border-radius: 4px; border: 1px solid #fff; background: #00ff88; }
+        .streak-fire { color: var(--warn); text-shadow: 0 0 10px var(--warn); }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="logo-box">
+        <div class="logo-main">MINDSETSTACK</div>
+        <div class="logo-sub">NEURAL PERFORMANCE OS</div>
+    </div>
+    <div class="nav-item active" onclick="setView('dashboard', this)"><span>01</span> DASHBOARD</div>
+    <div class="nav-item" onclick="setView('habits', this)"><span>02</span> HABITS</div>
+    <div class="nav-item" onclick="setView('tasks', this)"><span>03</span> TASKS</div>
+    <div class="nav-item" onclick="setView('vision', this)"><span>04</span> VISION</div>
+</nav>
+
+<main>
+    <div id="dashboard" class="view active">
+        <span class="label">System / Status / Tracking</span>
+        <h1 style="font-size: 48px; margin: 0 0 50px 0; font-weight: 800;">Momentum Dashboard</h1>
+        <div class="dashboard-grid">
+            <div class="widget">
+                <span class="label">Weekly Momentum</span>
+                <div class="chart-container">
+                    <svg class="area-chart" viewBox="0 0 600 200" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="glowGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="rgba(0, 255, 136, 0.4)"/>
+                                <stop offset="100%" stop-color="rgba(0, 255, 136, 0)"/>
+                            </linearGradient>
+                        </defs>
+                        <path id="momentum-curve" class="chart-path" d=""></path>
+                    </svg>
+                    <div class="chart-labels" id="day-labels"></div>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 30px;">
+                <div class="widget">
+                    <span class="label">Core Score</span>
+                    <div class="big-number" id="daily-perc">0%</div>
+                </div>
+                <div class="widget">
+                    <span class="label">Active Streak</span>
+                    <div style="font-size: 38px; font-weight: 800; margin-top: 10px;" id="streak-text"><span class="streak-fire">🔥</span>0 DAYS</div>
+                    <div id="best-streak" style="font-size: 9px; color: var(--dim); margin-top: 8px;">BEST: 0 DAYS</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="habits" class="view">
+        <h1 style="font-size: 42px; font-weight: 800;">Identity Habits</h1>
+        <div class="input-area">
+            <input id="hInput" placeholder="Add main habit...">
+            <button class="add-btn" onclick="add('habits')">Deploy</button>
+        </div>
+        <div id="hList"></div>
+    </div>
+
+    <div id="tasks" class="view">
+        <h1 style="font-size: 42px; font-weight: 800;">Priority Tasks</h1>
+        <div class="input-area">
+            <input id="tInput" placeholder="Add daily task...">
+            <button class="add-btn" onclick="add('tasks')">Deploy</button>
+        </div>
+        <div id="tList"></div>
+    </div>
+
+    <div id="vision" class="view">
+        <span class="label">Neural Mapping / Clarity</span>
+        <h1 style="font-size: 42px; font-weight: 800; margin-bottom: 20px;">Vision Map</h1>
+        <div class="widget" style="padding: 0; overflow: hidden; height: 600px; border: 1px solid rgba(0,255,136,0.1);">
+            <canvas id="visionCanvas"></canvas>
+            <div class="map-controls">
+                <div style="display:flex; align-items:center; gap:10px; color:#fff; font-size:10px; font-weight:800;">
+                    <div class="color-indicator" id="curColor"></div>
+                    <input type="color" id="nodeColor" value="#00ff88" oninput="document.getElementById('curColor').style.background=this.value" style="width:20px; height:20px; padding:0; border:none; opacity:0; position:absolute;">
+                    <span>COLOR</span>
+                </div>
+                <button class="add-btn" onclick="addNode(true)">+ CORE</button>
+                <button class="add-btn" onclick="addNode(false)">+ PILLAR</button>
+                <button class="add-btn" style="background:transparent; color:#555; border:1px solid #333;" onclick="clearVision()">RESET</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    // Database and State
+    let db = JSON.parse(localStorage.getItem('ms_neural_v11')) || {
+        habits: [], tasks: [], history: {}, streak: 0, bestStreak: 0,
+        nodes: [{ id: 1, x: 400, y: 300, text: "CORE IDENTITY", color: "#00ff88", size: 30, isCore: true }],
+        links: []
+    };
+
+    const canvas = document.getElementById('visionCanvas');
+    const ctx = canvas.getContext('2d');
+    let selectedNode = null, isDragging = false, linkSource = null, lastClickTime = 0;
+    const DAYS_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+    function getTodayKey() { return new Date().toISOString().split('T')[0]; }
+
+    function setView(id, btn) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        btn.classList.add('active');
+        if(id === 'vision') {
+            setTimeout(() => {
+                const container = canvas.parentElement;
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+                drawNodes();
+            }, 50);
+        }
+        render();
+    }
+
+    // Core Logic
+    function add(type) {
+        let inp = document.getElementById(type === 'habits' ? 'hInput' : 'tInput');
+        if(!inp.value) return;
+        db[type].push({t: inp.value, d: false, subs: []});
+        inp.value = '';
+        save();
+    }
+
+    function toggle(type, i) {
+        db[type][i].d = !db[type][i].d;
+        db[type][i].subs.forEach(s => s.d = db[type][i].d);
+        save();
+    }
+
+    function toggleSub(type, pi, si) {
+        db[type][pi].subs[si].d = !db[type][pi].subs[si].d;
+        db[type][pi].d = db[type][pi].subs.every(s => s.d);
+        save();
+    }
+
+    function addSub(type, i) {
+        const t = prompt("Milestone Name:");
+        if(t) { db[type][i].subs.push({t, d: false}); save(); }
+    }
+
+    function save() {
+        // Calculate Score
+        let total = 0, comp = 0;
+        const calc = (list) => list.forEach(item => {
+            if(item.subs.length > 0) {
+                total += item.subs.length; comp += item.subs.filter(s => s.d).length;
+            } else { total++; if(item.d) comp++; }
+        });
+        calc(db.habits); calc(db.tasks);
+        db.history[getTodayKey()] = total ? Math.round((comp / total) * 100) : 0;
+        
+        // Calculate Streak
+        let s = 0, d = new Date();
+        if((db.history[getTodayKey()] || 0) < 47) d.setDate(d.getDate() - 1);
+        while(db.history[d.toISOString().split('T')[0]] >= 47) { s++; d.setDate(d.getDate() - 1); }
+        db.streak = s; if(s > db.bestStreak) db.bestStreak = s;
+
+        localStorage.setItem('ms_neural_v11', JSON.stringify(db));
+        render();
+    }
+
+    function render() {
+        const score = db.history[getTodayKey()] || 0;
+        document.getElementById('daily-perc').innerText = score + '%';
+        document.getElementById('streak-text').innerHTML = `<span class="streak-fire">🔥</span>${db.streak} DAYS`;
+        document.getElementById('best-streak').innerText = `BEST: ${db.bestStreak} DAYS`;
+        
+        ['habits', 'tasks'].forEach(type => {
+            const list = document.getElementById(type === 'habits' ? 'hList' : 'tList');
+            list.innerHTML = '';
+            db[type].forEach((item, i) => {
+                const prog = item.subs.length ? (item.subs.filter(s => s.d).length / item.subs.length) * 100 : (item.d ? 100 : 0);
+                const el = document.createElement('div');
+                el.className = 'item-container';
+                el.innerHTML = `
+                    <div class="stack-row ${item.d?'checked':''}">
+                        <div class="checkbox-ui" onclick="toggle('${type}',${i})"></div>
+                        <div style="flex:1">
+                            <div style="font-weight:800; font-size:18px">${item.t}</div>
+                            <div class="progress-track"><div class="progress-fill" style="width:${prog}%"></div></div>
+                        </div>
+                        <div class="add-btn" style="padding:5px 10px; margin-right:15px;" onclick="addSub('${type}',${i})">+ SUB</div>
+                        <div class="del-icon" onclick="db['${type}'].splice(${i},1); save();">✕</div>
+                    </div>
+                    <div class="sub-tasks">
+                        ${item.subs.map((s, si) => `
+                            <div class="sub-row ${s.d?'checked':''}">
+                                <div class="sub-check" onclick="toggleSub('${type}',${i},${si})"></div>
+                                <span>${s.t}</span>
+                                <div class="del-icon" style="font-size:9px" onclick="db['${type}'][${i}].subs.splice(${si},1); save();">✕</div>
+                            </div>
+                        `).join('')}
+                    </div>`;
+                list.appendChild(el);
+            });
+        });
+
+        // Dashboard Chart
+        const labels = document.getElementById('day-labels'); labels.innerHTML = '';
+        const history = [];
+        for(let i=6; i>=0; i--) {
+            let d = new Date(); d.setDate(d.getDate() - i);
+            let k = d.toISOString().split('T')[0];
+            history.push(db.history[k] || 0);
+            labels.innerHTML += `<span class="day-name ${i===0?'active':''}">${DAYS_SHORT[d.getDay()]}</span>`;
+        }
+        const pts = history.map((v, i) => ({x: i * 100, y: 200 - (v * 1.8)}));
+        let dStr = `M ${pts[0].x},${pts[0].y}`;
+        for(let i=0; i<pts.length-1; i++) {
+            let cp = (pts[i].x + pts[i+1].x) / 2;
+            dStr += ` C ${cp},${pts[i].y} ${cp},${pts[i+1].y} ${pts[i+1].x},${pts[i+1].y}`;
+        }
+        document.getElementById('momentum-curve').setAttribute('d', dStr + ` L 600,200 L 0,200 Z`);
+        if(document.getElementById('vision').classList.contains('active')) drawNodes();
+    }
+
+    // Vision Map logic
+    function drawNodes() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        db.links.forEach(l => {
+            const s = db.nodes.find(n => n.id === l.from), e = db.nodes.find(n => n.id === l.to);
+            if(s && e) {
+                ctx.beginPath(); ctx.strokeStyle = s.color; ctx.globalAlpha = 0.2; ctx.lineWidth = 2;
+                ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
+            }
+        });
+        db.nodes.forEach(n => {
+            const isGlow = linkSource && linkSource.id === n.id;
+            ctx.globalAlpha = 1; ctx.shadowBlur = isGlow ? 40 : 20; ctx.shadowColor = n.color;
+            ctx.fillStyle = n.color;
+            ctx.beginPath(); ctx.arc(n.x, n.y, n.size, 0, Math.PI*2); ctx.fill();
+            if(isGlow) { ctx.strokeStyle="#fff"; ctx.lineWidth=4; ctx.stroke(); }
+            ctx.shadowBlur = 0; ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.font = "bold 11px sans-serif";
+            ctx.fillText(n.text.toUpperCase(), n.x, n.y + n.size + 18);
+        });
+    }
+
+    canvas.onmousedown = (e) => {
+        const r = canvas.getBoundingClientRect();
+        const mx = e.clientX - r.left, my = e.clientY - r.top;
+        const node = db.nodes.find(n => Math.hypot(n.x-mx, n.y-my) < n.size + 15);
+        
+        if(node) {
+            // Check for Double Click Rename
+            if(Date.now() - lastClickTime < 300) {
+                const nt = prompt("Rename:", node.text); if(nt) node.text = nt; save(); return;
+            }
+            lastClickTime = Date.now();
+
+            if(!linkSource) {
+                // First click: Selection
+                linkSource = node; selectedNode = node; isDragging = true;
+            } else {
+                // Second click: Connection logic
+                if(linkSource.id !== node.id) {
+                    const idx = db.links.findIndex(l => (l.from===linkSource.id && l.to===node.id) || (l.from===node.id && l.to===linkSource.id));
+                    if(idx > -1) db.links.splice(idx, 1);
+                    else db.links.push({from: linkSource.id, to: node.id});
+                    linkSource = null; save();
+                } else {
+                    linkSource = null; // Unselect if clicked same node
+                }
+            }
+        } else {
+            linkSource = null;
+        }
+        drawNodes();
+    };
+
+    window.onmousemove = (e) => {
+        if(isDragging && selectedNode) {
+            const r = canvas.getBoundingClientRect();
+            selectedNode.x = e.clientX - r.left; selectedNode.y = e.clientY - r.top;
+            drawNodes();
+        }
+    };
+    window.onmouseup = () => { if(isDragging) save(); isDragging = false; };
+
+    function addNode(core) {
+        const t = prompt("Node Name:");
+        if(t) {
+            db.nodes.push({id: Date.now(), x: canvas.width/2, y: canvas.height/2, text: t, color: document.getElementById('nodeColor').value, size: core?25:12, isCore: core});
+            save();
+        }
+    }
+
+    function clearVision() { if(confirm("Reset Vision Map?")) { db.nodes=[{id:1, x:400, y:300, text:"CORE", color:"#00ff88", size:30}]; db.links=[]; save(); }}
+
+    // Init
+    render();
+</script>
+</body>
+</html>
