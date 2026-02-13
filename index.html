@@ -59,7 +59,7 @@
         .progress-track { width: 100%; height: 4px; background: #111; border-radius: 2px; margin-top: 12px; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.8s ease; box-shadow: 0 0 10px var(--accent); }
         .sub-tasks { padding: 0 0 20px 70px; }
-        .sub-row { display: flex; align-items: center; gap: 15px; padding: 10px 0; color: var(--dim); font-size: 14px; }
+        .sub-row { display: flex; align-items: center; gap: 15px; padding: 10px 0; color: var(--dim); font-size: 14px; cursor: grab; }
         .checkbox-ui { width: 24px; height: 24px; border: 2px solid #222; border-radius: 8px; margin-right: 25px; cursor: pointer; }
         .checked .checkbox-ui { background: var(--accent); border-color: var(--accent); }
         .sub-check { width: 18px; height: 18px; border: 2px solid #333; border-radius: 5px; cursor: pointer; }
@@ -165,7 +165,6 @@
 </main>
 
 <script>
-    // Database and State
     let db = JSON.parse(localStorage.getItem('ms_neural_v12')) || {
         habits: [], tasks: [], history: {}, streak: 0, bestStreak: 0,
         nodes: [{ id: 1, x: 400, y: 300, text: "CORE IDENTITY", color: "#00ff88", size: 30, isCore: true }],
@@ -197,8 +196,7 @@
 
     function initSortables() {
         const config = {
-            animation: 300,
-            ghostClass: 'sortable-ghost',
+            animation: 300, ghostClass: 'sortable-ghost',
             onEnd: function (evt) {
                 const type = evt.from.id === 'hList' ? 'habits' : 'tasks';
                 const items = db[type].filter(x => !x.d);
@@ -226,6 +224,8 @@
         db[type][i].d = !db[type][i].d;
         if(db[type][i].d) {
             db[type][i].completedAt = new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        } else {
+            db[type][i].completedAt = null;
         }
         db[type][i].subs.forEach(s => s.d = db[type][i].d);
         save();
@@ -237,6 +237,8 @@
         db[type][pi].d = allDone;
         if(allDone) {
             db[type][pi].completedAt = new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        } else {
+            db[type][pi].completedAt = null;
         }
         save();
     }
@@ -248,11 +250,20 @@
 
     function save() {
         let total = 0, comp = 0;
+        const todayStr = new Date().toLocaleDateString([], { month: 'short', day: 'numeric' });
+
         const calc = (list) => list.forEach(item => {
-            if(item.subs.length > 0) {
-                total += item.subs.length; comp += item.subs.filter(s => s.d).length;
-            } else { total++; if(item.d) comp++; }
+            if (item.subs.length > 0) {
+                item.subs.forEach(s => {
+                    total++;
+                    if (s.d && item.completedAt && item.completedAt.includes(todayStr)) comp++;
+                });
+            } else {
+                total++;
+                if (item.d && item.completedAt && item.completedAt.includes(todayStr)) comp++;
+            }
         });
+
         calc(db.habits); calc(db.tasks);
         db.history[getTodayKey()] = total ? Math.round((comp / total) * 100) : 0;
         
@@ -284,11 +295,12 @@
                     <div class="del-icon" onclick="event.stopPropagation(); db['${type}'].splice(${i},1); save();">✕</div>
                 </div>
                 ${!isDoneView && item.subs.length > 0 ? `
-                <div class="sub-tasks">
+                <div class="sub-tasks" id="sub-${type}-${i}">
                     ${item.subs.map((s, si) => `
                         <div class="sub-row ${s.d?'checked':''}">
                             <div class="sub-check" onclick="event.stopPropagation(); toggleSub('${type}',${i},${si})"></div>
-                            <span>${s.t}</span>
+                            <span style="flex:1" onclick="const nt=prompt('Rename sub-task:', '${s.t}'); if(nt){db['${type}'][${i}].subs[${si}].t=nt; save();}">${s.t}</span>
+                            <div class="del-icon" style="font-size:10px" onclick="event.stopPropagation(); db['${type}'][${i}].subs.splice(${si},1); save();">✕</div>
                         </div>
                     `).join('')}
                 </div>` : ''}
@@ -316,6 +328,23 @@
             else doneList.innerHTML += createItemHTML(item, i, 'tasks', true);
         });
 
+        ['habits', 'tasks'].forEach(type => {
+            db[type].forEach((item, i) => {
+                const subEl = document.getElementById(`sub-${type}-${i}`);
+                if (subEl) {
+                    Sortable.create(subEl, {
+                        animation: 150,
+                        onEnd: (evt) => {
+                            const subs = db[type][i].subs;
+                            const [moved] = subs.splice(evt.oldIndex, 1);
+                            subs.splice(evt.newIndex, 0, moved);
+                            save();
+                        }
+                    });
+                }
+            });
+        });
+
         const labels = document.getElementById('day-labels'); labels.innerHTML = '';
         const history = [];
         for(let i=6; i>=0; i--) {
@@ -334,9 +363,6 @@
         if(document.getElementById('vision').classList.contains('active')) drawNodes();
     }
 
-    // ==========================================
-    // SWAPPED VISION MAP LOGIC
-    // ==========================================
     function drawNodes() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         db.links.forEach(l => {
@@ -361,28 +387,21 @@
         const r = canvas.getBoundingClientRect();
         const mx = e.clientX - r.left, my = e.clientY - r.top;
         const node = db.nodes.find(n => Math.hypot(n.x-mx, n.y-my) < n.size + 15);
-        
         if(node) {
             if(Date.now() - lastClickTime < 300) {
                 const nt = prompt("Rename:", node.text); if(nt) node.text = nt; save(); return;
             }
             lastClickTime = Date.now();
-
-            if(!linkSource) {
-                linkSource = node; selectedNode = node; isDragging = true;
-            } else {
+            if(!linkSource) { linkSource = node; selectedNode = node; isDragging = true; } 
+            else {
                 if(linkSource.id !== node.id) {
                     const idx = db.links.findIndex(l => (l.from===linkSource.id && l.to===node.id) || (l.from===node.id && l.to===linkSource.id));
                     if(idx > -1) db.links.splice(idx, 1);
                     else db.links.push({from: linkSource.id, to: node.id});
                     linkSource = null; save();
-                } else {
-                    linkSource = null; 
-                }
+                } else { linkSource = null; }
             }
-        } else {
-            linkSource = null;
-        }
+        } else { linkSource = null; }
         drawNodes();
     };
 
@@ -405,7 +424,6 @@
 
     function clearVision() { if(confirm("Reset Vision Map?")) { db.nodes=[{id:1, x:400, y:300, text:"CORE", color:"#00ff88", size:30}]; db.links=[]; save(); }}
 
-    // Init Logic
     render();
     initSortables();
 </script>
